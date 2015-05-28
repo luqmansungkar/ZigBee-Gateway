@@ -1,0 +1,3 @@
+#!/bin/bash
+
+/opt/jdk1.8.0_33/bin/java -classpath /home/pi/cobaJava/org.eclipse.po.mqtt.utility.jar:/home/pi/cobaJava/org.eclipse.paho.client.mqttv3.jar:/home/pi/cobaJava Mulai 1 > /home/pi/cobaJava/log-1.txt &
