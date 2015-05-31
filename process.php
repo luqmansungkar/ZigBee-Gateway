@@ -20,14 +20,34 @@ if (isset($_POST['action'])) {
 function onOff(){
 	global $gatewayBaseUrl, $apiKey;
 	$id = $_POST['id'];
-	$value = $_POST['value'];
+	$value = explode("::", $_POST['value']);
+	$attr = explode("::", $_POST['attr']);
 	//echo "masuk: ".$id.", ".$value."<br>";
 	//$ch2 = curl_init();
-	$data_json = '{"on": '.$value.'}';
+	$data_json = '{';
+	for ($i=0; $i < count($attr); $i++) { 
+		$data_json.= '"'.$attr[$i].'":'.$value[$i];
+		if ($i < count($attr)-1) {
+			$data_json .= ',';
+		}
+	}
+	$data_json .= '}';
 
-	kurl($gatewayBaseUrl.$apiKey."/lights/".$id."/state","PUT",$data_json);
-	header("Location: index.php");
-	die();
+	$result = kurl($gatewayBaseUrl.$apiKey."/lights/".$id."/state","PUT",$data_json);
+	$hasilDecode = json_decode(substr($result, 1,-1));
+	if (array_key_exists('success', $hasilDecode)) {
+		$message = json_decode($hasilDecode->success);
+		$state = "";
+		foreach ($message as $key => $value) {
+			$state = $value;
+		}
+		echo "sukses:".$value;
+		//echo $result;
+	}else{
+		echo $data_json;
+	}
+	/*header("Location: index.php");
+	die();*/
 }
 	
 function registerThings(){

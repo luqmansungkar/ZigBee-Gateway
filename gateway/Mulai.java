@@ -17,14 +17,21 @@ import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+
 /**
  *
  * @author Fauziah Rahmawati
  */
 public class Mulai{
 	public static void main(String[] args) {
-       System.out.println("tes output: "+args[0]);
-       new Gateway();
+       System.out.println("user ID: "+args[0]);
+       System.out.println("things ID: "+args[1]);
+       new Gateway(args[0],args[1]);
 	}
 
 	static class Gateway implements MqttCallback{
@@ -33,8 +40,20 @@ public class Mulai{
     public MqttClient clientSub;
     public MqttMessage message;
     public Thread mqttThread;
+    public String userID;
+    public String thingsID;
 
-    public Gateway(){
+    Connection con = null;
+    Statement st = null;
+    ResultSet rs = null;
+
+    String url = "jdbc:mysql://localhost:3306/gateway";
+    String user = "root";
+    String password = "root";
+
+    public Gateway(String userID, String thingsID){
+        this.userID = userID;
+        this.thingsID = thingsID;
         try {
             // membuat client sebagai publisher
             clientPub = new MqttClient("tcp://128.199.236.53:1883", "Publisher");
@@ -48,6 +67,12 @@ public class Mulai{
             
         } catch (MqttException ex) {
             ex.printStackTrace();
+        }
+        try{
+            con = DriverManager.getConnection(url, user, password);
+            st = con.createStatement();
+        }catch(Exception e){
+            System.out.println("eror konek ke database");
         }
     }
     
@@ -63,14 +88,17 @@ public class Mulai{
             // jika client adalah subscriber diatur agar subscribe ke topik tentang jaringan ZigBee
             if(c.getClientId().equalsIgnoreCase("Subscriber")){
                 // client diatur agar bisa menerima pesan dari broker
-                /*c.setCallback(Gateway.this);
+                c.setCallback(Gateway.this);
                 // subscribe info tentang coordinator
-                c.subscribe("coordinator/#");
+                //c.subscribe("coordinator/#");
                 // subscribe info tentang lampu
-                c.subscribe("lights/#");
+                //c.subscribe("lights/#");
                 // subscribe info tentang grup dan scene
-                c.subscribe("groups/#");*/
-                c.subscribe("yeah/lights");
+                //c.subscribe("groups/#");
+                //String topik = "sot/"+userID+"/ledlight/"+thingsID+"/";
+                String topik = "sot/"+userID+"/#";
+                System.out.println(topik);
+                c.subscribe(topik);
                 System.out.println("Subscriber connected");
             }
             else{
@@ -139,20 +167,26 @@ public class Mulai{
     void checkCommand(String topic, String command){
         String msg = "";
         //String wrong = "Wrong command";
-        //String[] topicArr = topic.split("/");
+        String[] topicArr = topic.split("/");
+        String localId = getLocalId(topicArr[3]);
         //int length = topicArr.length;
                 
-
-        if (command.equalsIgnoreCase("status")) {
-            /*msg = executeREST("PUT", "http://localhost:8080/api/4171700133/lights/1/state", "{'on':true}");*/
-            msg = executeREST("GET", "http://localhost:8080/api/4171700133/lights/1", null);
-        }else if (command.equalsIgnoreCase("nyala")) {
-        	msg = executeREST("PUT", "http://localhost:8080/api/4171700133/lights/1/state", "{\"on\":true}");
-        }else if (command.equalsIgnoreCase("mati")) {
-            msg = executeREST("PUT", "http://localhost:8080/api/4171700133/lights/1/state", "{\"on\":false}");
+        if (Integer.parseInt(localId) > 0) {
+            if (command.equalsIgnoreCase("status")) {
+                /*msg = executeREST("PUT", "http://localhost:8080/api/4171700133/lights/1/state", "{'on':true}");*/
+                msg = executeREST("GET", "http://localhost:8080/api/4171700133/lights/"+localId, null);
+            }else if (command.equalsIgnoreCase("nyala")) {
+                msg = executeREST("PUT", "http://localhost:8080/api/4171700133/lights/"+localId+"/state", "{\"on\":true}");
+            }else if (command.equalsIgnoreCase("mati")) {
+                msg = executeREST("PUT", "http://localhost:8080/api/4171700133/lights/"+localId+"/state", "{\"on\":false}");
+            }
+            // mengirimkan pesan dan topik ke broker
+            publish("sot/"+userID+"/ledlight/"+thingsID+"/log", msg);
+        }else{
+            publish("sot/"+userID+"/ledlight/"+thingsID+"/log", "ID things tidak ditemukan");
         }
-        // mengirimkan pesan dan topik ke broker
-        publish("zigbee/lights", msg);
+        
+        
     }
     
     /**
@@ -227,6 +261,23 @@ public class Mulai{
                 connection.disconnect(); 
             }
         }
+    }
+
+    private String getLocalId(String id){
+        try{
+            rs = st.executeQuery("Select * from things");
+            boolean notFound = true;
+            while(rs.next() && notFound){
+                if (id.equals(rs.getString(1))) {
+                    return rs.getString(4);
+                }
+            }
+        }catch(Exception e){
+            System.out.println("Error ketika get local id");
+            return "-1";
+        }
+
+        return "-1";
     }
 }
 }

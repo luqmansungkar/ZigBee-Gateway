@@ -1,1 +1,7 @@
-tes output: 1
+user ID: 55696f302d26bc7b10e20c24
+things ID: 1
+Publisher created
+Subscriber created
+sot/55696f302d26bc7b10e20c24/#
+Subscriber connected
+Publisher connected
