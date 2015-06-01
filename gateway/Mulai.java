@@ -50,6 +50,8 @@ public class Mulai{
     String url = "jdbc:mysql://localhost:3306/gateway";
     String user = "root";
     String password = "root";
+    
+    String apiKey = "LUQMANGWTA";
 
     public Gateway(String userID, String thingsID){
         this.userID = userID;
@@ -96,7 +98,8 @@ public class Mulai{
                 // subscribe info tentang grup dan scene
                 //c.subscribe("groups/#");
                 //String topik = "sot/"+userID+"/ledlight/"+thingsID+"/";
-                String topik = "sot/"+userID+"/#";
+                //sot/g/userid/categoryname/thingid/propertyname/acc or ctl
+                String topik = "sot/g/"+userID+"/+/+/+/ctl";
                 System.out.println(topik);
                 c.subscribe(topik);
                 System.out.println("Subscriber connected");
@@ -166,22 +169,28 @@ public class Mulai{
      */
     void checkCommand(String topic, String command){
         String msg = "";
+        //sot/g/userid/categoryname/thingid/propertyname/acc or ctl
         //String wrong = "Wrong command";
         String[] topicArr = topic.split("/");
-        String localId = getLocalId(topicArr[3]);
+        String localId = getLocalId(topicArr[4]);
+        String attr = topicArr[5];
+        String url = "http://localhost:8080/api/"+apiKey+"/lights/"+localId+"/state";
         //int length = topicArr.length;
                 
         if (Integer.parseInt(localId) > 0) {
-            if (command.equalsIgnoreCase("status")) {
-                /*msg = executeREST("PUT", "http://localhost:8080/api/4171700133/lights/1/state", "{'on':true}");*/
+
+            msg = executeREST("PUT", url, "{\""+attr+"\":"+command+"}");
+            /*if (command.equalsIgnoreCase("status")) {
+                msg = executeREST("PUT", "http://localhost:8080/api/4171700133/lights/1/state", "{'on':true}");
                 msg = executeREST("GET", "http://localhost:8080/api/4171700133/lights/"+localId, null);
             }else if (command.equalsIgnoreCase("nyala")) {
                 msg = executeREST("PUT", "http://localhost:8080/api/4171700133/lights/"+localId+"/state", "{\"on\":true}");
             }else if (command.equalsIgnoreCase("mati")) {
                 msg = executeREST("PUT", "http://localhost:8080/api/4171700133/lights/"+localId+"/state", "{\"on\":false}");
             }
+            */
             // mengirimkan pesan dan topik ke broker
-            publish("sot/"+userID+"/ledlight/"+thingsID+"/log", msg);
+            //publish("sot/"+userID+"/ledlight/"+thingsID+"/log", msg);
         }else{
             publish("sot/"+userID+"/ledlight/"+thingsID+"/log", "ID things tidak ditemukan");
         }

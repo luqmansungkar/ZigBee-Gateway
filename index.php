@@ -24,43 +24,47 @@ include 'settings.php';
 	$output = kurl('localhost:8080/api/'.$apiKey."/lights","GET");
 	if (!empty($output)) {
 		$json_obj = json_decode($output);
-		$count = 0;
-		foreach ($json_obj as $obj) {
-			$count++;
+		//$count = 0;
+		$id_lampu = [];
+		foreach ($json_obj as $key => $value) {
+			array_push($id_lampu, $key);
 			//echo $count.". Name: ".$obj->name;
 		}
+		//print_r($id_lampu);
+		for ($i=0; $i < count($id_lampu); $i++) { 
+			echo "Lampu ke".($i+1)."<br>";
 
-		for ($i=1; $i <= $count; $i++) { 
-			echo "Lampu ke".$i."<br>";
-
-			$output = kurl($gatewayBaseUrl.$apiKey."//lights/".$i,"GET","");
-
+			$output = kurl($gatewayBaseUrl.$apiKey."//lights/".$id_lampu[$i],"GET","");
+			//echo $output;
 			//echo $output;
 			$temp_json_obj = json_decode($output, true);
 			$hex = fGetHex((($temp_json_obj['state']['hue'] / 65535) * 360),($temp_json_obj['state']['sat']/255) * 100,100);
 			echo "Nama : ".$temp_json_obj['name']."<br>";
-			echo "<div id='".$i."-status'>onOff: ".($temp_json_obj['state']['on'] == true ? "true":"false")."</div><br><br>";
+			echo "<div id='".$id_lampu[$i]."-status'>onOff: ".($temp_json_obj['state']['on'] == true ? "true":"false")."</div><br><br>";
 			/*echo '<form action="process.php" method="POST">
 			<input type="hidden" name="action" value="1">
-			<input type="hidden" name="id" value="'.$i.'">
+			<input type="hidden" name="id" value="'.$id_lampu[$i].'">
 			<input type="hidden" name="value" value="'.($temp_json_obj['state']['on'] == true ? "false":"true").'"><br>
 			<input type="submit" value="'.($temp_json_obj['state']['on'] == true ? "Matiin":"Nyalain").'">
 			</form>';*/
-			echo '<button id="'.$i.'-onOff" onclick="onOff('.$i.','.($temp_json_obj['state']['on'] == true ? "false":"true").')" >'.($temp_json_obj['state']['on'] == true ? "Matiin":"Nyalain").'</button><br>';
-			echo '<input type="range" id="'.$i.'-bri" onchange="brightness('.$i.')" style="width:255px" value="'.$temp_json_obj['state']['bri'].'" min="0" max="255" step="1"><br>';
-			echo '<input value="'.$hex.'" onchange="hsv('.$i.',this.color.hsv[0],this.color.hsv[1])" id="'.$i.'-hsv" class="color {pickerMode:\'HSV\', slider:false}"><br>';
-			$exist = dbSelect('things','*','local_id = '.$i);
+			echo '<button id="'.$id_lampu[$i].'-onOff" onclick="onOff('.$id_lampu[$i].','.($temp_json_obj['state']['on'] == true ? "false":"true").')" >'.($temp_json_obj['state']['on'] == true ? "Matiin":"Nyalain").'</button><br>';
+			echo '<input type="range" id="'.$id_lampu[$i].'-bri" onchange="brightness('.$id_lampu[$i].')" style="width:255px" value="'.$temp_json_obj['state']['bri'].'" min="0" max="255" step="1"><br>';
+			echo '<input value="'.$hex.'" onchange="hsv('.$id_lampu[$i].',this.color.hsv[0],this.color.hsv[1])" id="'.$id_lampu[$i].'-hsv" class="color {pickerMode:\'HSV\', slider:false}"><br>';
+			$exist = dbSelect('things','*','local_id = '.$id_lampu[$i]);
 			//print_r($exist);
 			if (mysqli_num_rows($exist) < 1) {
-				echo '<form action="process.php" method="POST">
+				/*echo '<form action="process.php" method="POST">
 					<input type="hidden" name="action" value="2">
-					<input type="hidden" name="id" value="'.$i.'">
+					<input type="hidden" name="id" value="'.$id_lampu[$i].'">
 					<input type="hidden" name="nama" value="'.$temp_json_obj['name'].'">
 					<input type="submit" value="Daftarkan '.$temp_json_obj['name'].'">
-				</form>';
+				</form>';*/
+				echo '<a href="register-things.php?id='.$id_lampu[$i].'&nama='.$temp_json_obj['name'].'"><button>Daftarkan '.$temp_json_obj['name'].'</button></a>';
 			}else{
 				$result = $exist->fetch_assoc();
 				// print_r($result);
+				echo "<br>Atribut yang diberikan diperbolehkan di akses adalah: ".$result['access']."<br>";
+				echo "Atribut yang diberikan diperbolehkan di kontrol adalah: ".$result['control']."<br><br>";
 				echo "Things sudah terdaftar dengan id: ".$result['id'];
 				
 			}
@@ -116,13 +120,16 @@ function hsv(id,hues,sats){
 }
 
 function onOff(id, nilai){
-	loadXMLDoc("action=1&attr=on&id="+id+"&value="+nilai, function(){
+	var konten = "action=1&attr=on&id="+id+"&value="+nilai;
+	//console.log(konten);
+	loadXMLDoc(konten, function(){
 		if (xmlhttp.readyState==4 && xmlhttp.status==200)
 		  {
 		  	//document.getElementById("myDiv").innerHTML=xmlhttp.responseText;
 		  	var result = xmlhttp.responseText;
 		  	//console.log(result);
 		  	if (result.includes('sukses')) {
+		  		//console.log(result);
 		  		var state = result.split(":")[1];
 		  		document.getElementById(id+"-status").innerHTML="onOff: "+state;
 		  		document.getElementById(id+"-onOff").innerHTML=(state == 'false' ? "Nyalain":"Matiin");
