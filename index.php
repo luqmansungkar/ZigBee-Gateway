@@ -1,8 +1,8 @@
 <?php
 include 'functions.php';
 include 'settings.php';
-	/*$bash = "sudo /var/www/ta/gateway/tes ".$userID." 1";
-	$output = shell_exec($bash);*/
+	$bash = "sudo /var/www/ta/gateway/tes ".$userID." 1";
+	$output = shell_exec($bash);
 
 	//$bash = "sudo /var/www/ta/gateway/tes 2>&1";
 	/*$bash = "sudo /var/www/ta/gateway/tes ".$userID;

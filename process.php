@@ -51,16 +51,19 @@ function onOff(){
 	/*header("Location: index.php");
 	die();*/
 }
-	
+
+$thingsID = "";
+
 function registerThings(){
-	global $baseUrl, $userID;
+	global $thingsID, $baseUrl, $userID;
 	$requestToken = getThingsToken();
 	$nama = $_POST['nama'];
 	$local_id = $_POST['id'];
-	$bri = $_POST['bri'];
-	$hue = $_POST['hue'];
-	$sat = $_POST['sat'];
-	$thingsID = "";
+	$attr[0] = $_POST['bri'];
+	$attr[1] = $_POST['hue'];
+	$attr[2] = $_POST['sat'];
+	$attr[3] = $_POST['on'];
+	//$thingsID = "";
 	/*
 		{
 			name: String, 
@@ -89,59 +92,40 @@ function registerThings(){
 		
 		$urlAtribut = $baseUrl."user/".$userID."/thing/".$thingsID."/property/register";
 		//echo $thingsID;
-		if (!empty($bri)) {
-			$konten = '{
-			"name": "bri", 
-			"access": '.(in_array('acc', $bri) ? 'true' : 'false').',
-			"control": '.(in_array('ctrl', $bri) ? 'true' : 'false').',
-			"valueType": "BOOL",
-			"description": "Tingkat kecerahan Lampu",
-			"min": 0,
-			"max": 255
-			}';
-			$hasil = kurl($urlAtribut, "POST",$konten)."<br>";
-			echo $hasil;
-			if (strpos($hasil,'added:') !== false) {
-			    in_array('acc', $bri) ? $access .= "bri," : '';
-				in_array('ctrl', $bri) ? $control .= "bri," : '';
-			}
-		}
 
-		if (!empty($hue)) {
-			$konten = '{
-			"name": "hue", 
-			"access": '.(in_array('acc', $hue) ? 'true' : 'false').',
-			"control": '.(in_array('ctrl', $hue) ? 'true' : 'false').',
-			"valueType": "INT",
-			"description": "Warna lampu",
-			"min": 0,
-			"max": 65535
-			}';
-			$hasil = kurl($urlAtribut, "POST",$konten)."<br>";
-			echo $hasil;
-			if (strpos($hasil,'added:') !== false) {
-			   in_array('acc', $hue) ? $access .= "hue," : '';
-			   in_array('ctrl', $hue) ? $control .= "hue," : '';
-			}
-		}
+		for ($i=0; $i < count($attr); $i++) { 
+			if (!empty($attr[$i])) {
+				$hasil = "";
+				$attrName = "";
+				switch ($i) {
+					case 0:
+						$hasil = attrRegister($attr[$i],"bri","INT","Tingkat kecerahan Lampu",0,255);
+						$attrName = "bri";
+						break;
+					case 1:
+						$hasil = attrRegister($attr[$i], "hue","INT","Warna lampu", 0,65535);
+						$attrName = "hue";
+						break;
+					case 2:
+						$hasil = attrRegister($attr[$i],"sat","INT","Tingkat kecerahan warna lampu",0,255);
+						$attrName = "sat";
+						break;		
+					case 3:
+						$hasil = attrRegister($attr[$i],"on","BOOL","Status nyala/mati lampu","false","true");
+						$attrName = "on";
+						break;	
+					default:
+						# code...
+						break;
+				}
 
-		if (!empty($hue)) {
-			$konten = '{
-			"name": "sat", 
-			"access": '.(in_array('acc', $sat) ? 'true' : 'false').',
-			"control": '.(in_array('ctrl', $sat) ? 'true' : 'false').',
-			"valueType": "INT",
-			"description": "Tingkat kecerahan warna lampu",
-			"min": 0,
-			"max": 255
-			}';
-			$hasil = kurl($urlAtribut, "POST",$konten)."<br>";
-			echo $hasil;
-			if (strpos($hasil,'added:') !== false) {
-			    in_array('acc', $sat) ? $access .= "sat," : '';
-			    in_array('ctrl', $sat) ? $control .= "sat," : '';
+				if (strpos($hasil,'added:') !== false) {
+				    in_array('acc', $attr[$i]) ? $access .= $attrName."," : '';
+					in_array('ctrl', $attr[$i]) ? $control .= $attrName."," : '';
+				}
 			}
 		}
+		
 		$access = rtrim($access, ",");
 		$control = rtrim($control, ",");
 
@@ -158,6 +142,24 @@ function registerThings(){
 	header("Location: index.php");
 	die();
 
+}
+
+function attrRegister($array, $nama, $tipe, $description, $min, $max){
+	global $thingsID, $baseUrl, $userID;
+		$urlAtribut = $baseUrl."user/".$userID."/thing/".$thingsID."/property/register";
+		$konten = '{
+		"name": "'.$nama.'", 
+		"access": '.(in_array('acc', $array) ? 'true' : 'false').',
+		"control": '.(in_array('ctrl', $array) ? 'true' : 'false').',
+		"valueType": "'.$tipe.'",
+		"description": "'.$description.'",
+		"min": '.$min.',
+		"max": '.$max.'
+		}';
+		echo $konten."<br>";
+		$hasil = kurl($urlAtribut, "POST",$konten)."<br>";
+		echo $hasil;
+		return $hasil;
 }
 
 ?>

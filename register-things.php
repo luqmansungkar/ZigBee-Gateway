@@ -25,6 +25,11 @@
 			</tr>
 		</thead>
 		<tr>
+			<td>On / Off</td>
+			<td><input name="on[]" value="ctrl" type="checkbox"></td>
+			<td><input name="on[]" value="acc" type="checkbox"></td>
+		</tr>
+		<tr>
 			<td>Brightness</td>
 			<td><input name="bri[]" value="ctrl" type="checkbox"></td>
 			<td><input name="bri[]" value="acc" type="checkbox"></td>
