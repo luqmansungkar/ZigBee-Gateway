@@ -10,6 +10,9 @@ if (isset($_POST['action'])) {
 		case '2':
 			registerThings();
 			break;
+		case '3':
+			login();
+			break;	
 		
 		default:
 			# code...
@@ -17,11 +20,29 @@ if (isset($_POST['action'])) {
 	}
 }
 
+function login(){
+	global $baseUrl;
+	$email = $_POST['email'];
+	$url = $baseUrl."user/check/".$email;
+	$hasil = kurl($url,"GET","");
+	$hasilDecode = json_decode($hasil);
+	if (array_key_exists('user', $hasilDecode)) {
+		//echo $hasilDecode->user;
+		echo dbInsert("setting",array(
+			"kunci"=>"user_id",
+			"value"=>$hasilDecode->user));
+	}else{
+		echo "gagal";
+	}
+
+}
+
 function onOff(){
 	global $gatewayBaseUrl, $apiKey;
 	$id = $_POST['id'];
 	$value = explode("::", $_POST['value']);
 	$attr = explode("::", $_POST['attr']);
+	$mode = $_POST['mode'];
 	//echo "masuk: ".$id.", ".$value."<br>";
 	//$ch2 = curl_init();
 	$data_json = '{';
@@ -32,8 +53,15 @@ function onOff(){
 		}
 	}
 	$data_json .= '}';
-
-	$result = kurl($gatewayBaseUrl.$apiKey."/lights/".$id."/state","PUT",$data_json);
+	$url = "";
+	if ($mode == 1) {
+		$url = $gatewayBaseUrl.$apiKey."/lights/".$id."/state";
+	}else{
+		$url = $gatewayBaseUrl.$apiKey."/groups/".$id."/action";
+	}
+	
+	//echo $url;
+	$result = kurl($url,"PUT",$data_json);
 	$hasilDecode = json_decode(substr($result, 1,-1));
 	if (array_key_exists('success', $hasilDecode)) {
 		$message = $hasilDecode->success;
@@ -46,7 +74,8 @@ function onOff(){
 		echo "sukses:".$state;
 		//echo $result;
 	}else{
-		echo $data_json;
+		echo $url;
+		//echo $data_json;
 	}
 	/*header("Location: index.php");
 	die();*/
@@ -58,6 +87,7 @@ function registerThings(){
 	global $thingsID, $baseUrl, $userID;
 	$requestToken = getThingsToken();
 	$nama = $_POST['nama'];
+	$tipe = $_POST['tipe'];
 	$local_id = $_POST['id'];
 	$attr[0] = $_POST['bri'];
 	$attr[1] = $_POST['hue'];
@@ -131,7 +161,7 @@ function registerThings(){
 
 		dbInsert('things',array(
 			'id'=>$thingsID,
-			'type'=>'Lampu',
+			'type'=> ($tipe == 1) ?'Lampu' : 'Group',
 			'nama'=>$nama,
 			'local_id'=>$local_id,
 			'control'=>$control,

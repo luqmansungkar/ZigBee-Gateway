@@ -2,9 +2,3 @@ user ID: 556c455f2205a3380a411277
 things ID: 1
 Publisher created
 Subscriber created
-sot/g/556c455f2205a3380a411277/+/+/+/ctl
-Subscriber connected
-Publisher connected
-Delivery complete
-Client publish: sot/556c455f2205a3380a411277/undefined/556f0d1e7b5ed5de4bf1b219/bri/acc
-bri lampu ke 2 : 0

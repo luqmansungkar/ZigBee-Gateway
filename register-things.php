@@ -11,10 +11,12 @@
 	}
 ?>
 
+<div style="padding:20px">
 <h3>Pilih hak akses untuk tiap atribut :</h3>
 <form action="process.php" method="POST" >
 	<input type="hidden" name="action" value="2">
 	<input type="hidden" name="id" value="<?php echo $_GET["id"] ?>">
+	<input type="hidden" name="tipe" value="<?php echo $_GET["tipe"] ?>">
 	<input type="hidden" name="nama" value="<?php echo $_GET["nama"] ?>">
 	<table class="table">
 		<thead>
@@ -52,3 +54,4 @@
 	</table>
 
 </form>
+</div>

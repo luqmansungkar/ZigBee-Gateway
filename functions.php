@@ -23,11 +23,11 @@ function kurl($url, $method, $json){
 }
 
 function getThingsToken(){
-	include 'settings.php';
-	$requestToken = file_get_contents($baseUrl."gentoken/".$productToken);
-	$requestToken = str_replace('"', "", $requestToken);
-	//echo "requestToken: ".$requestToken;
-	return $requestToken;
+    include "settings.php";
+    $requestToken = file_get_contents($baseUrl."gentoken/".$productToken);
+    $requestToken = str_replace('"', "", $requestToken);
+    //echo "requestToken: ".$requestToken;
+    return $requestToken;
 }
 
 function dbInsert($table_name, $form_data){
@@ -41,7 +41,7 @@ function dbInsert($table_name, $form_data){
     (`".implode('`,`', $fields)."`)
     VALUES('".implode("','", $form_data)."')";
     //echo "sql: ".$sql;
-
+    //return $sql;
     return dbQuery($sql);
 }
 
@@ -52,7 +52,8 @@ function dbSelect($table_name, $select_query, $where_query){
 		$sql .= " WHERE ".$where_query;
 	}
 	//echo $sql;
-	return dbQuery($sql);
+	//return $sql;
+    return dbQuery($sql);
 	
 }
 
