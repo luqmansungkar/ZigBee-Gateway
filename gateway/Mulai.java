@@ -220,8 +220,14 @@ public class Mulai{
         //String wrong = "Wrong command";
         String[] topicArr = topic.split("/");
         String localId = getLocalId(topicArr[4]);
+        String tipe = getTipe(topicArr[4]);
         String attr = topicArr[5];
-        String url = "http://localhost:8080/api/"+apiKey+"/lights/"+localId+"/state";
+        String url = "";
+        if (tipe.equals("Lampu")) {
+            url = "http://localhost:8080/api/"+apiKey+"/lights/"+localId+"/state";
+        }else{
+            url = "http://localhost:8080/api/"+apiKey+"/groups/"+localId+"/action";
+        }
         //int length = topicArr.length;
                 
         if (Integer.parseInt(localId) > 0) {
@@ -329,6 +335,31 @@ public class Mulai{
                 if (id.equals(rs.getString(1))) {
                     System.out.println("ketemu");
                     return rs.getString(4);
+                }
+            }
+        }catch(Exception e){
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                PrintStream ps = new PrintStream(baos);
+                e.printStackTrace(ps);
+                ps.close();
+                System.out.println(baos.toString());
+            System.out.println("Error ketika get local id: "+id);
+            return "-1";
+        }
+
+        return "-1";
+    }
+
+    private String getTipe(String id){
+        try{
+            rs = doQuery("Select * from things");
+            //System.out.println("Sukses executeQuery");
+            boolean notFound = true;
+            while(rs.next() && notFound){
+                System.out.println("Di dalam while");
+                if (id.equals(rs.getString(1))) {
+                    System.out.println("ketemu");
+                    return rs.getString(2);
                 }
             }
         }catch(Exception e){
