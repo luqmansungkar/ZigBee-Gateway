@@ -4,6 +4,6 @@ then
   echo "program sudah berjalan";
 else
   # process not found
-  /opt/jdk1.8.0_33/bin/java -classpath /var/www/ta/gateway/org.eclipse.po.mqtt.utility.jar:/var/www/ta/gateway/org.eclipse.paho.client.mqttv3.jar:/var/www/ta/gateway/mysql-connector-java-5.1.35-bin.jar:/var/www/ta/gateway/json.jar:/var/www/ta/gateway Mulai $1 $2 > /var/www/ta/gateway/log-1.txt &
+  /opt/jdk1.8.0_33/bin/java -classpath /var/www/ta/gateway/org.eclipse.po.mqtt.utility.jar:/var/www/ta/gateway/org.eclipse.paho.client.mqttv3.jar:/var/www/ta/gateway/mysql-connector-java-5.1.35-bin.jar:/var/www/ta/gateway/json.jar:/var/www/ta/gateway Mulai > /var/www/ta/gateway/log-1.txt &
 fi
 

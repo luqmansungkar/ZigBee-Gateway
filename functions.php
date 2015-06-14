@@ -30,6 +30,12 @@ function getThingsToken(){
     return $requestToken;
 }
 
+function getUserId(){
+    $result = dbSelect('setting','*',"kunci = 'user_id'");
+    $user = $result->fetch_assoc();
+    return $user['value'];
+}
+
 function dbInsert($table_name, $form_data){
 	//credit : http://www.evoluted.net/thinktank/web-development/time-saving-database-functions
 

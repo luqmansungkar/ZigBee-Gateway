@@ -7,15 +7,19 @@ include 'settings.php';
 	<script src="js/jquery-2.1.4.min.js"></script>
 	<script src="js/bootstrap.min.js"></script>
 </head>
+<div class="row">
+<div id="login" class="col-md-6">
 <?php
 	$userExist = dbSelect('setting','*',"kunci = 'user_id'");
+	$loggedIn = false;
 	//print_r($userExist);
 	if (mysqli_num_rows($userExist) < 1) {
 ?>
-<div id="login">
-	<button style="margin-left:25px;margin-top:25px" class="btn btn-primary" data-toggle="modal" data-target=".fade">Login</button>
 
-	<div class="modal fade">
+
+	<button style="margin-left:25px;margin-top:25px" class="btn btn-primary" data-toggle="modal" data-target=".login">Login</button>
+
+	<div class="modal fade login">
 	  <div class="modal-dialog">
 	    <div class="modal-content">
 	      <div class="modal-header">
@@ -32,10 +36,18 @@ include 'settings.php';
 	    </div><!-- /.modal-content -->
 	  </div><!-- /.modal-dialog -->
 	</div><!-- /.modal -->
-</div>
+
+
 <?php 
+	}else{
+		$loggedIn = true;
 	}
 ?>
+</div>
+	<div id="konfig" class="col-md-6">
+		<a href="wifi.php"><h4 style="float:right;margin-right:20px"><span class="glyphicon glyphicon-signal" aria-hidden="true"></span> Pilih Access Point</h4></a>
+	</div>
+</div>
 <div class="row">
   <div class="col-md-6" style="padding-left:40px">
   <h2>Lights</h2>
@@ -60,8 +72,9 @@ include 'settings.php';
 		//echo "apiKey bener";
 	}*/
 	//$apiKey = kurl('localhost:8080/api','POST','{"devicetype":"my gateway"}');
-	getThingsToken();
+	//getThingsToken();
 	$output = kurl('localhost:8080/api/'.$apiKey."/lights","GET");
+	$listLampu = array();
 	if (!empty($output)) {
 		$json_obj = json_decode($output);
 		//$count = 0;
@@ -73,33 +86,39 @@ include 'settings.php';
 		//print_r($id_lampu);
 		for ($i=0; $i < count($id_lampu); $i++) { 
 			echo "Lampu ke".($i+1)."<br>";
-
 			$output = kurl($gatewayBaseUrl.$apiKey."//lights/".$id_lampu[$i],"GET","");
 			//echo $output;
 			//echo $output;
 			$temp_json_obj = json_decode($output, true);
+			$listLampu[$id_lampu[$i]] = $temp_json_obj['name'];
 			$hex = fGetHex((($temp_json_obj['state']['hue'] / 65535) * 360),($temp_json_obj['state']['sat']/255) * 100,100);
 			echo "Nama : ".$temp_json_obj['name']."<br>";
 			echo "<div id='".$id_lampu[$i]."-status'>onOff: ".($temp_json_obj['state']['on'] == true ? "true":"false")."</div><br><br>";
 
-			echo '<button class="btn btn-default" id="'.$id_lampu[$i].'-onOff" onclick="onOff('.$id_lampu[$i].','.($temp_json_obj['state']['on'] == true ? "false":"true").',1)" >'.($temp_json_obj['state']['on'] == true ? "Matiin":"Nyalain").'</button><br>';
+			echo '<button class="btn btn-default" id="'.$id_lampu[$i].'-onOff" onclick="onOff('.$id_lampu[$i].','.($temp_json_obj['state']['on'] == true ? "false":"true").',1)" >'.($temp_json_obj['state']['on'] == true ? "Matikan":"Nyalakan").'</button><br>';
 			echo '<input type="range" id="'.$id_lampu[$i].'-bri-1" onchange="brightness('.$id_lampu[$i].',1)" style="width:255px" value="'.$temp_json_obj['state']['bri'].'" min="0" max="255" step="1"><br>';
 			echo '<input value="'.$hex.'" onchange="hsv('.$id_lampu[$i].',this.color.hsv[0],this.color.hsv[1],1)" id="'.$id_lampu[$i].'-hsv" class="color {pickerMode:\'HSV\', slider:false}"><br><br>';
 			$exist = dbSelect('things','*','local_id = '.$id_lampu[$i].' and type = "Lampu"');
 			//print_r($exist);
 			if (mysqli_num_rows($exist) < 1) {
-
-				echo '<a href="register-things.php?tipe=1&id='.$id_lampu[$i].'&nama='.$temp_json_obj['name'].'"><button class="btn btn-default">Daftarkan '.$temp_json_obj['name'].'</button></a>';
+				if ($loggedIn) {
+					echo '<a href="register-things.php?tipe=1&id='.$id_lampu[$i].'&nama='.$temp_json_obj['name'].'"><button class="btn btn-default">Daftarkan '.$temp_json_obj['name'].'</button></a>';
+				}else{
+					echo "Anda perlu log in untuk mendaftarkan lampu ini";
+				}
+				
 			}else{
 				$result = $exist->fetch_assoc();
 				// print_r($result);
 				echo "<br>Atribut yang diberikan diperbolehkan di akses adalah: ".$result['access']."<br>";
 				echo "Atribut yang diberikan diperbolehkan di kontrol adalah: ".$result['control']."<br><br>";
-				echo "Things sudah terdaftar dengan id: ".$result['id'];
+				echo "Lampu sudah terdaftar dengan id: ".$result['id'];
 				
 			}
 			echo "<br><hr><br>";
 		}
+	}else{
+		echo '<div>Tidak ada lampu yang terhubung</div>';
 	}
 	
 ?>
@@ -131,14 +150,19 @@ include 'settings.php';
 			}
 			$idAnggota = rtrim($idAnggota,",");
 			echo "Id Anggota: ".$idAnggota."<br><br>";
-			echo '<button class="btn btn-default" id="'.$id_lampu[$i].'-onOff-2" onclick="onOff('.$id_lampu[$i].','.($temp_json_obj['action']['on'] == true ? "false":"true").',2)" >'.($temp_json_obj['action']['on'] == true ? "Matiin":"Nyalain").'</button><br>';
+			echo '<button class="btn btn-default" id="'.$id_lampu[$i].'-onOff-2" onclick="onOff('.$id_lampu[$i].','.($temp_json_obj['action']['on'] == true ? "false":"true").',2)" >'.($temp_json_obj['action']['on'] == true ? "Matikan":"Nyalakan").'</button><br>';
 			echo '<input type="range" id="'.$id_lampu[$i].'-bri-2" onchange="brightness('.$id_lampu[$i].',2)" style="width:255px" value="'.$temp_json_obj['action']['bri'].'" min="0" max="255" step="1"><br>';
 			echo '<input type="hidden" id="'.$id_lampu[$i].'-anggota" value="'.$idAnggota.'">';
 			echo '<input value="'.$hex.'" onchange="hsv('.$id_lampu[$i].',this.color.hsv[0],this.color.hsv[1],2)" id="'.$id_lampu[$i].'-hsv-2" class="color {pickerMode:\'HSV\', slider:false}"><br><br>';
 			$exist = dbSelect('things','*','local_id = '.$id_lampu[$i].' and type = "Group"');
 			//print_r($exist);
 			if (mysqli_num_rows($exist) < 1) {
-				echo '<a href="register-things.php?tipe=2&id='.$id_lampu[$i].'&nama='.$temp_json_obj['name'].'"><button class="btn btn-default">Daftarkan '.$temp_json_obj['name'].'</button></a>';
+				if ($loggedIn) {
+					echo '<a href="register-things.php?tipe=2&id='.$id_lampu[$i].'&nama='.$temp_json_obj['name'].'"><button class="btn btn-default">Daftarkan '.$temp_json_obj['name'].'</button></a>';
+				}else{
+					echo "Anda perlu log ini untuk mendaftarkan group ini";
+				}
+				
 			}else{
 				$result = $exist->fetch_assoc();
 				// print_r($result);
@@ -149,8 +173,45 @@ include 'settings.php';
 			}
 			echo "<br><hr><br>";
 		}
+	}else{
+		echo '<div>Belum ada group yang dibuat</div>';
 	}
+
+if (!empty($listLampu)) {
 ?>
+<button style="margin-top:25px" class="btn btn-primary" data-toggle="modal" data-target=".addGroup">Buat Group</button>
+
+<div class="modal fade addGroup">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title">Buat Group Baru</h4>
+      </div>
+      <div class="modal-body">
+      	<form action="process.php" method="POST">
+  		<input type="text" class="form-control" name="nama" placeholder="Nama Group">
+  		<input type="hidden" name="action" value="4">
+  		<br>
+  		<?php 
+  			foreach ($listLampu as $key => $value) {
+  				echo '<input name="group[]" value="'.$key.'" type="checkbox"> '.$value.'<br>';
+  			}
+  		?>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        <button type="submit" class="btn btn-primary" >Submit</button>
+        </form>
+      </div>
+    </div><!-- /.modal-content -->
+  </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+<?php 
+}
+?>
+
 </div>
 </div>
 
@@ -213,7 +274,7 @@ function onOff(id, nilai,mode){
 		  		var state = result.split(":")[1];
 		  		if (mode == 2) {
 		  			document.getElementById(id+"-status-2").innerHTML="onOff: "+state;
-		  			document.getElementById(id+"-onOff-2").innerHTML=(state == 'false' ? "Nyalain":"Matiin");
+		  			document.getElementById(id+"-onOff-2").innerHTML=(state == 'false' ? "Nyalakan":"Matikan");
 		  			document.getElementById(id+"-onOff-2").setAttribute("onclick","onOff("+id+","+(state == 'false' ? "true":"false")+",2)");
 
 		  			var anggota = document.getElementById(id+"-anggota").value;
@@ -221,13 +282,13 @@ function onOff(id, nilai,mode){
 		  			for (var i = 0; i < anggota.length; i++) {
 		  				//console.log(anggota[i]);
 		  				document.getElementById(anggota[i]+"-status").innerHTML="onOff: "+state;
-		  				document.getElementById(anggota[i]+"-onOff").innerHTML=(state == 'false' ? "Nyalain":"Matiin");
+		  				document.getElementById(anggota[i]+"-onOff").innerHTML=(state == 'false' ? "Nyalakan":"Matikan");
 		  				document.getElementById(anggota[i]+"-onOff").setAttribute("onclick","onOff("+anggota[i]+","+(state == 'false' ? "true":"false")+",1)");
 		  			};
 
 		  		}else{
 		  			document.getElementById(id+"-status").innerHTML="onOff: "+state;
-		  			document.getElementById(id+"-onOff").innerHTML=(state == 'false' ? "Nyalain":"Matiin");
+		  			document.getElementById(id+"-onOff").innerHTML=(state == 'false' ? "Nyalakan":"Matikan");
 		  			document.getElementById(id+"-onOff").setAttribute("onclick","onOff("+id+","+(state == 'false' ? "true":"false")+",1)");
 		  		}
 
@@ -257,8 +318,7 @@ function login(){
 	});
 }
 
-function loadXMLDoc(konten, callback)
-{
+function loadXMLDoc(konten, callback){
 console.log(konten);
 if (window.XMLHttpRequest)
   {// code for IE7+, Firefox, Chrome, Opera, Safari

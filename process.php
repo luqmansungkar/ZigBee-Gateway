@@ -5,7 +5,7 @@ if (isset($_POST['action'])) {
 	$action = $_POST['action'];
 	switch ($action) {
 		case '1':
-			onOff();
+			setAttribute();
 			break;
 		case '2':
 			registerThings();
@@ -13,11 +13,38 @@ if (isset($_POST['action'])) {
 		case '3':
 			login();
 			break;	
-		
+		case '4':
+			createGroup();
+			break;	
 		default:
 			# code...
 			break;
 	}
+}
+
+function createGroup(){
+	global $gatewayBaseUrl,$apiKey;
+	$nama = $_POST['nama'];
+	$lampus = $_POST['group'];
+	if (!empty($lampus)) {
+		$konten = '{"name":"'.$nama.'"}';
+		$hasil = kurl($gatewayBaseUrl.$apiKey."/groups","POST",$konten);
+		$hasilDecode = json_decode(substr($hasil, 1,-1));
+		if (array_key_exists('success', $hasilDecode)){
+			$id = $hasilDecode->success->id;
+			$konten = '{"lights":[';
+			foreach ($lampus as $lampu) {
+				$konten .= '"'.$lampu.'",';
+			}
+			$konten = rtrim($konten,",");
+			$konten.=']}';
+			$url = $gatewayBaseUrl.$apiKey."/groups/".$id;
+			//echo $url;
+			echo kurl($url,"PUT",$konten);
+		}
+	}
+	header("Location: index.php");
+	die();
 }
 
 function login(){
@@ -37,7 +64,7 @@ function login(){
 
 }
 
-function onOff(){
+function setAttribute(){
 	global $gatewayBaseUrl, $apiKey;
 	$id = $_POST['id'];
 	$value = explode("::", $_POST['value']);
@@ -84,7 +111,8 @@ function onOff(){
 $thingsID = "";
 
 function registerThings(){
-	global $thingsID, $baseUrl, $userID;
+	global $thingsID, $baseUrl;
+	$userID = getUserId();
 	$requestToken = getThingsToken();
 	$nama = $_POST['nama'];
 	$tipe = $_POST['tipe'];
@@ -137,7 +165,7 @@ function registerThings(){
 						$attrName = "hue";
 						break;
 					case 2:
-						$hasil = attrRegister($attr[$i],"sat","INT","Tingkat kecerahan warna lampu",0,255);
+						$hasil = attrRegister($attr[$i],"sat","INT","Tingkat kejenuhan warna lampu",0,255);
 						$attrName = "sat";
 						break;		
 					case 3:
@@ -175,12 +203,13 @@ function registerThings(){
 }
 
 function attrRegister($array, $nama, $tipe, $description, $min, $max){
-	global $thingsID, $baseUrl, $userID;
+	global $thingsID, $baseUrl;
+	$userID = getUserId();
 		$urlAtribut = $baseUrl."user/".$userID."/thing/".$thingsID."/property/register";
 		$konten = '{
 		"name": "'.$nama.'", 
-		"access": '.(in_array('acc', $array) ? 'true' : 'false').',
-		"control": '.(in_array('ctrl', $array) ? 'true' : 'false').',
+		"access": {"state":'.(in_array('acc', $array) ? 'true' : 'false').'},
+		"control": {"state":'.(in_array('ctrl', $array) ? 'true' : 'false').'},
 		"valueType": "'.$tipe.'",
 		"description": "'.$description.'",
 		"min": '.$min.',

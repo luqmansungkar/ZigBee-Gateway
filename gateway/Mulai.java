@@ -37,12 +37,12 @@ import java.io.PrintStream;
  */
 public class Mulai{
 	public static void main(String[] args) {
-       System.out.println("user ID: "+args[0]);
-       System.out.println("things ID: "+args[1]);
+       //System.out.println("user ID: "+args[0]);
+       //System.out.println("things ID: "+args[1]);
        //new Gateway(args[0],args[1]);
 
        Timer timer = new Timer();
-       timer.schedule(new Gateway(args[0],args[1]), 0, 10000);
+       timer.schedule(new Gateway(), 0, 10000);
 	}
 
 	static class Gateway extends TimerTask implements MqttCallback{
@@ -52,7 +52,6 @@ public class Mulai{
     public MqttMessage message;
     public Thread mqttThread;
     public String userID;
-    public String thingsID;
 
     static Connection con = null;
     static Statement st = null;
@@ -64,9 +63,9 @@ public class Mulai{
     
     String apiKey = "LUQMANGWTA";
 
-    public Gateway(String userID, String thingsID){
-        this.userID = userID;
-        this.thingsID = thingsID;
+    public Gateway(){
+    	//mengambil user id
+        this.userID = getUserId();
         try {
             // membuat client sebagai publisher
             clientPub = new MqttClient("tcp://128.199.236.53:1883", "Publisher");
@@ -89,37 +88,38 @@ public class Mulai{
         }
     }
     public void run() {
-       //System.out.println("Hello World dari method run!");
 
        if (clientPub.isConnected()) {
-       	//sot/556c455f2205a3380a411277/undefined/556d7d4a645affa05ceb40a4/bri/acc
+
        		rs = doQuery("Select * from things");
        		try{
 	       		while(rs.next()){
 	       			String id = rs.getString(1);
 	       			String localId = rs.getString(4);
-	       			String access[] = rs.getString(6).split(",");
+                    if (rs.getString(6).length() > 0) {
+                        String access[] = rs.getString(6).split(",");
+                        String url = "http://localhost:8080/api/"+apiKey+"/lights/"+localId;
+                        String jsonString = executeREST("GET", url, null);
+                        if (jsonString != null && jsonString.charAt(0) != '[') {
+                            //System.out.println("masih masuk sini: "+jsonString);
+                            JSONObject jsonObject = new JSONObject(jsonString);
+                            JSONObject newJSON = jsonObject.getJSONObject("state");
+                            //System.out.println(newJSON.toString());
+                            jsonObject = new JSONObject(newJSON.toString());
 
-	       			String url = "http://localhost:8080/api/"+apiKey+"/lights/"+localId;
-	       			String jsonString = executeREST("GET", url, null);
-	       			if (jsonString != null && jsonString.charAt(0) != '[') {
-	       				//System.out.println("masih masuk sini: "+jsonString);
-	       				JSONObject jsonObject = new JSONObject(jsonString);
-	       				JSONObject newJSON = jsonObject.getJSONObject("state");
-	       				//System.out.println(newJSON.toString());
-	       				jsonObject = new JSONObject(newJSON.toString());
-
-	       				for (String attr : access) {
-	       					if (attr.equals("on")) {
-	       						publish("sot/"+userID+"/undefined/"+id+"/"+attr+"/acc", attr+": "+(jsonObject.getBoolean(attr) == true ? "true" : "false" ));
-	       						System.out.println(attr+" lampu ke "+localId+" : "+(jsonObject.getBoolean(attr) == true ? "true" : "false" ));
-	       					}else{
-	       						publish("sot/"+userID+"/undefined/"+id+"/"+attr+"/acc", attr+": "+jsonObject.getInt(attr));
-	       						System.out.println(attr+" lampu ke "+localId+" : "+jsonObject.getInt(attr));
-	       					}
-	       					
-	       				}
-	       			}
+                            for (String attr : access) {
+                                if (attr.equals("on")) {
+                                    publish("sot/"+userID+"/undefined/"+id+"/"+attr+"/acc", attr+": "+(jsonObject.getBoolean(attr) == true ? "true" : "false" ));
+                                    System.out.println(attr+" lampu ke "+localId+" : "+(jsonObject.getBoolean(attr) == true ? "true" : "false" ));
+                                }else{
+                                    publish("sot/"+userID+"/undefined/"+id+"/"+attr+"/acc", attr+": "+jsonObject.getInt(attr));
+                                    System.out.println(attr+" lampu ke "+localId+" : "+jsonObject.getInt(attr));
+                                }
+                                
+                            }
+                        }
+                    }
+	       			
 	            }
        		}catch(Exception e){
        			ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -141,18 +141,15 @@ public class Mulai{
             // menghubungkan client dengan broker
             c.connect();
             c.setCallback(this);
-            // jika client adalah subscriber diatur agar subscribe ke topik tentang jaringan ZigBee
             if(c.getClientId().equalsIgnoreCase("Subscriber")){
                 // client diatur agar bisa menerima pesan dari broker
                 c.setCallback(Gateway.this);
-                //sot/g/userid/categoryname/thingid/propertyname/acc or ctl
                 String topik = "sot/g/"+userID+"/+/+/+/ctl";
                 System.out.println(topik);
                 c.subscribe(topik);
                 System.out.println("Subscriber connected");
             }
             else{
-            	//publish("yeah/lights","nyala euy");
                 System.out.println("Publisher connected");
             }
         }
@@ -222,33 +219,26 @@ public class Mulai{
         String localId = getLocalId(topicArr[4]);
         String tipe = getTipe(topicArr[4]);
         String attr = topicArr[5];
+        String allowed[] = getAttr(topicArr[4]).split(","); 
         String url = "";
-        if (tipe.equals("Lampu")) {
-            url = "http://localhost:8080/api/"+apiKey+"/lights/"+localId+"/state";
-        }else{
-            url = "http://localhost:8080/api/"+apiKey+"/groups/"+localId+"/action";
-        }
-        //int length = topicArr.length;
-                
-        if (Integer.parseInt(localId) > 0) {
-
-            msg = executeREST("PUT", url, "{\""+attr+"\":"+command+"}");
-            /*if (command.equalsIgnoreCase("status")) {
-                msg = executeREST("PUT", "http://localhost:8080/api/4171700133/lights/1/state", "{'on':true}");
-                msg = executeREST("GET", "http://localhost:8080/api/4171700133/lights/"+localId, null);
-            }else if (command.equalsIgnoreCase("nyala")) {
-                msg = executeREST("PUT", "http://localhost:8080/api/4171700133/lights/"+localId+"/state", "{\"on\":true}");
-            }else if (command.equalsIgnoreCase("mati")) {
-                msg = executeREST("PUT", "http://localhost:8080/api/4171700133/lights/"+localId+"/state", "{\"on\":false}");
+        if (arrayContain(allowed,attr)) {
+            if (tipe.equals("Lampu")) {
+                url = "http://localhost:8080/api/"+apiKey+"/lights/"+localId+"/state";
+            }else{
+                url = "http://localhost:8080/api/"+apiKey+"/groups/"+localId+"/action";
             }
-            */
-            // mengirimkan pesan dan topik ke broker
-            //publish("sot/"+userID+"/ledlight/"+thingsID+"/log", msg);
+            //int length = topicArr.length;
+                    
+            if (Integer.parseInt(localId) > 0) {
+
+                msg = executeREST("PUT", url, "{\""+attr+"\":"+command+"}");
+            }else{
+                //publish("sot/"+userID+"/ledlight/"+thingsID+"/log", "ID things tidak ditemukan");
+                System.out.println("id lampu tidak ditemukan");
+            }
         }else{
-            publish("sot/"+userID+"/ledlight/"+thingsID+"/log", "ID things tidak ditemukan");
+            System.out.println("atribut tidak diperbolehkan untuk di kontrol");
         }
-        
-        
     }
     
     /**
@@ -315,7 +305,7 @@ public class Mulai{
             return resp;
         }
         catch(Exception e){
-                e.printStackTrace();
+                //e.printStackTrace();
                 return null;
         }
         finally{
@@ -325,6 +315,14 @@ public class Mulai{
         }
     }
 
+    private boolean arrayContain(String[] haystack, String needle){
+        for (String s : haystack) {
+            if (s.equals(needle)) {
+                return true;
+            }
+        }
+        return false;
+    }
     private String getLocalId(String id){
         try{
             rs = doQuery("Select * from things");
@@ -368,7 +366,53 @@ public class Mulai{
                 e.printStackTrace(ps);
                 ps.close();
                 System.out.println(baos.toString());
-            System.out.println("Error ketika get local id: "+id);
+            System.out.println("Error ketika get tipe: "+id);
+            return "-1";
+        }
+
+        return "-1";
+    }
+
+    private String getUserId(){
+    	try{
+            rs = doQuery("Select * from setting where kunci = 'user_id'");
+            //System.out.println("Sukses executeQuery");
+            boolean notFound = true;
+            while(rs.next() && notFound){
+                return rs.getString(2);
+            }
+        }catch(Exception e){
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                PrintStream ps = new PrintStream(baos);
+                e.printStackTrace(ps);
+                ps.close();
+                System.out.println(baos.toString());
+            System.out.println("Error ketika get user id: ");
+            return "-1";
+        }
+
+        return "-1";
+    }
+
+    private String getAttr(String id){
+        try{
+            rs = doQuery("Select * from things");
+            //System.out.println("Sukses executeQuery");
+            boolean notFound = true;
+            while(rs.next() && notFound){
+                System.out.println("Di dalam while");
+                if (id.equals(rs.getString(1))) {
+                    System.out.println("ketemu");
+                    return rs.getString(5);
+                }
+            }
+        }catch(Exception e){
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                PrintStream ps = new PrintStream(baos);
+                e.printStackTrace(ps);
+                ps.close();
+                System.out.println(baos.toString());
+            System.out.println("Error ketika get tipe: "+id);
             return "-1";
         }
 
